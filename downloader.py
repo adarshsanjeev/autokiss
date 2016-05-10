@@ -1,19 +1,18 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-from time import sleep
+from urllib import urlretrieve
+import save
 
-FIREFOX = '/usr/bin/firefox'
-CHORME = '/usr/bin/chromium'
 URL = 'http://kisscartoon.me/Cartoon/Gravity-Falls-Season-02/'
 
 def init():
     global browser
-    browser = webdriver.Firefox(executable_path = FIREFOX)
+    browser = webdriver.Firefox()
 
 def get_list(URL):
     browser.set_script_timeout(10)
     browser.get(URL)
-    sleep(10)
+    browser.implicitly_wait(10)
     browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
 
     episode_table = browser.find_element_by_class_name('listing').find_element_by_css_selector("*")
@@ -43,16 +42,19 @@ def parse_input(episodes):
             raise
     return episode_list
 
-def download_vid(element):
-    link = element.get_attribute('href')
+def download_vid(link):
     browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 't')
     browser.set_script_timeout(15)
     browser.get(link)
-    sleep(20)
+    browser.implicitly_wait(20)
 
     browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
     print browser.find_element_by_css_selector('.clsTempMSg > div:nth-child(3) > a:nth-child(1)').text
-    browser.find_element_by_css_selector('.clsTempMSg > div:nth-child(3) > a:nth-child(1)').click()
+    save_link = browser.find_element_by_css_selector('.clsTempMSg > div:nth-child(3) > a:nth-child(1)').get_attribute('href')
+    browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
+    filename = link.split('/')[-1].split('?')[0] + '.mp4'
+    print filename, save_link
+    save.download_file(save_link, filename)
 
 if __name__ == "__main__":
     init()
@@ -66,7 +68,7 @@ if __name__ == "__main__":
     """
     
     # download_list = parse_input(raw_input())
-    download_vid(episode_list[0])
+    download_vid(episode_list[1].get_attribute('href'))
 
 """    for _ in download_list:
         try:

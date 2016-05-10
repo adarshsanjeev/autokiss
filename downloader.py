@@ -1,87 +1,30 @@
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from urllib import urlretrieve
-import save
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+import urllib2
 
-URL = 'http://kisscartoon.me/Cartoon/Gravity-Falls-Season-02/'
+url = "https://r7---sn-hju7en7e.googlevideo.com/videoplayback?id=f70b9937ac00b0b4&itag=22&source=picasa&begin=0&requiressl=yes&mm=30&mn=sn-hju7en7e&ms=nxu&mv=m&pl=24&mime=video/mp4&lmt=1415352439160936&mt=1462807547&ip=88.201.58.172&ipbits=8&expire=1462836506&sparams=ip,ipbits,expire,id,itag,source,requiressl,mm,mn,ms,mv,pl,mime,lmt&signature=1C40444EA84858E10507815930AE53E17D2556CB.71263A37A658DBC1443C0445AD17BC7ACE5BBB1A&key=ck2"
 
-def init():
-    global browser
-    browser = webdriver.Firefox()
-
-def get_list(URL):
-    browser.set_script_timeout(20)
-    browser.get(URL)
-    WebDriverWait(browser, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.bigBarContainer:nth-child(4) > div:nth-child(2)")))
-    # browser.implicitly_wait(20)
-    browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
-
-    episode_table = browser.find_element_by_class_name('listing').find_element_by_css_selector("*")
-    episode_list = episode_table.find_elements_by_tag_name('tr')[:2:-1]
-    episode_list = [i.find_element_by_tag_name('a') for i in episode_list]
-    
-    return episode_list
-
-def parse_input(episodes):
-    episode_list = episodes.split(',')
-    for index, entry in enumerate(episode_list):
-        try:
-            if type(entry) == int:
-                continue
-            entry = entry.strip()
-            if '-' in entry:
-                range_start, range_end = entry.split('-')
-                range_start, range_end = int(range_start), int(range_end)
-                del episode_list[index]
-                for _ in range(range_start, range_end+1)[::-1]:
-                    episode_list.insert(index, _)
-            else:
-                episode_list[index] = int(entry)
-        except ValueError:
-            print "%s found, must be a valid integer" % (entry)
-            browser.Quit()
-            raise
-    return episode_list
-
-def download_vid(link):
-    browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 't')
-    browser.set_script_timeout(15)
-    browser.get(link)
-    WebDriverWait(browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".clsTempMSg > div:nth-child(3) > a:nth-child(1)")))
-
-    browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
-    save_link = browser.find_element_by_css_selector('.clsTempMSg > div:nth-child(3) > a:nth-child(1)').get_attribute('href')
-    browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
-    filename = link.split('/')[-1].split('?')[0] + '.mp4'
-    print filename, save_link
-    save.download_file(save_link, filename)
-
-if __name__ == "__main__":
-    init()
-    episode_list = get_list(URL)
-    for index, entry in enumerate(episode_list):
-      print "%d. %s"  %(index, entry.text)
-      
-    print """
-    Enter the list of episodes to download.
-    Format: 1, 2, 4-6
-    """
-    
-    download_list = parse_input(raw_input())
-
-    print "DOWNLOADING:", download_list
-    for _ in download_list:
+def download_file(url, file_name = "a.mp4"):
+    try:
+        u = urllib2.urlopen(url)
+        f = open(file_name, 'wb')
+        meta = u.info()
+        file_size = int(meta.getheaders("Content-Length")[0])
+        print "Downloading: %s Bytes: %s" % (file_name, file_size)
+        
+        file_size_dl = 0
+        block_sz = 8192
         while True:
-            try:
-                download_vid(episode_list[_].get_attribute('href'))
+            buffer = u.read(block_sz)
+            if not buffer:
                 break
-            except KeyboardInterrupt:
-                browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
-                break
-            except:
-                print "Download failed, attempting again, Use control C to exit"
-                browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
-                continue
+
+            file_size_dl += len(buffer)
+            f.write(buffer)
+            status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
+            status = status + chr(8)*(len(status)+1)
+            print status,
+    except:
+        return False
+    finally:
+        f.close()
+
+    return True

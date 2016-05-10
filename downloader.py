@@ -2,6 +2,9 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from urllib import urlretrieve
 import save
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 URL = 'http://kisscartoon.me/Cartoon/Gravity-Falls-Season-02/'
 
@@ -10,9 +13,10 @@ def init():
     browser = webdriver.Firefox()
 
 def get_list(URL):
-    browser.set_script_timeout(10)
+    browser.set_script_timeout(20)
     browser.get(URL)
-    browser.implicitly_wait(10)
+    WebDriverWait(browser, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.bigBarContainer:nth-child(4) > div:nth-child(2)")))
+    # browser.implicitly_wait(20)
     browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
 
     episode_table = browser.find_element_by_class_name('listing').find_element_by_css_selector("*")
@@ -46,10 +50,9 @@ def download_vid(link):
     browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 't')
     browser.set_script_timeout(15)
     browser.get(link)
-    browser.implicitly_wait(20)
+    WebDriverWait(browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".clsTempMSg > div:nth-child(3) > a:nth-child(1)")))
 
     browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
-    print browser.find_element_by_css_selector('.clsTempMSg > div:nth-child(3) > a:nth-child(1)').text
     save_link = browser.find_element_by_css_selector('.clsTempMSg > div:nth-child(3) > a:nth-child(1)').get_attribute('href')
     browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
     filename = link.split('/')[-1].split('?')[0] + '.mp4'
@@ -67,17 +70,18 @@ if __name__ == "__main__":
     Format: 1, 2, 4-6
     """
     
-    # download_list = parse_input(raw_input())
-    download_vid(episode_list[1].get_attribute('href'))
+    download_list = parse_input(raw_input())
 
-"""    for _ in download_list:
-        try:
-            download_vid(episode_list[_])
-        except IndexError:
-            raise IndexError("%s is not in the list" %(_) )
-"""
-
-"""
-    browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 't')
-    browser.set_script_timeout(15)
-"""
+    print "DOWNLOADING:", download_list
+    for _ in download_list:
+        while True:
+            try:
+                download_vid(episode_list[_].get_attribute('href'))
+                break
+            except KeyboardInterrupt:
+                browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
+                break
+            except:
+                print "Download failed, attempting again, Use control C to exit"
+                browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
+                continue

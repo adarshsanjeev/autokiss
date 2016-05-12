@@ -1,26 +1,29 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from urllib import urlretrieve
-import downloader
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from sys import argv
+from time import sleep
+import downloader
 
-URL = argv[1]
+INDEX_CSS_SELECTOR = '.listing'
+TIME_LIMIT = 60
+
+# If the player does not work, CLICK 
+# assert "No results found." not in driver.page_source
 
 def init():
     global browser
     browser = webdriver.Firefox()
 
 def get_list(URL):
-    browser.set_script_timeout(20)
     browser.get(URL)
-    WebDriverWait(browser, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.bigBarContainer:nth-child(4) > div:nth-child(2)")))
-    # browser.implicitly_wait(20)
+    WebDriverWait(browser, TIME_LIMIT).until(EC.presence_of_element_located((By.CSS_SELECTOR, INDEX_CSS_SELECTOR)))
     browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
 
-    episode_table = browser.find_element_by_class_name('listing').find_element_by_css_selector("*")
+    episode_table = browser.find_element_by_class_name(INDEX_CSS_SELECTOR).find_element_by_css_selector("*")
     episode_list = episode_table.find_elements_by_tag_name('tr')[:2:-1]
     episode_list = [i.find_element_by_tag_name('a') for i in episode_list]
     
@@ -47,21 +50,27 @@ def parse_input(episodes):
             raise
     return episode_list
 
+# driver.find_element_by_link_text('Continue')
 def download_vid(link):
     browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 't')
-    browser.set_script_timeout(15)
     browser.get(link)
-    WebDriverWait(browser, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".clsTempMSg > div:nth-child(3) > a:nth-child(1)")))
-
+    WebDriverWait(browser, TIME_LIMIT).until(EC.presence_of_element_located((By.LINK_TEXT, "HERE")))
+    assert "If the player does not work, CLICK" in browser.page_source
     browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
-    save_link = browser.find_element_by_css_selector('.clsTempMSg > div:nth-child(3) > a:nth-child(1)').get_attribute('href')
-    browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
+    save_link = browser.find_element_by_link_text('HERE').get_attribute('href')
+    browser.close()
     filename = link.split('/')[-1].split('?')[0] + '.mp4'
     print filename, save_link
     downloader.download_file(save_link, filename)
 
 if __name__ == "__main__":
+    try:
+        URL = argv[1]
+    except IndexError:
+        raise SyntaxError("Wrong usage: autokiss.py <url>")
+
     init()
+
     episode_list = get_list(URL)
     for index, entry in enumerate(episode_list):
       print "%d. %s"  %(index, entry.text)
@@ -78,11 +87,13 @@ if __name__ == "__main__":
         while True:
             try:
                 download_vid(episode_list[_].get_attribute('href'))
+                print "Sleeping for 1 min to avoid detection"
+                sleep(60)
                 break
             except KeyboardInterrupt:
                 browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
                 break
             except:
-                print "Download failed, attempting again, Use control C to exit"
+                print "Download failed, attempting again infinitely, Use control C to exit"
                 browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
                 continue

@@ -1,39 +1,37 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-from urllib import urlretrieve
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from sys import argv
 from time import sleep
-import downloader
+from downloader import download_file
 
-INDEX_CSS_SELECTOR = '.listing'
+INDEX_SELECTOR = '.listing'
 TIME_LIMIT = 60
-
-# If the player does not work, CLICK 
-# assert "No results found." not in driver.page_source
+browser = None
 
 def init():
     global browser
     browser = webdriver.Firefox()
 
-def get_list(URL):
+def get_episode_list(URL):
     browser.get(URL)
-    WebDriverWait(browser, TIME_LIMIT).until(EC.presence_of_element_located((By.CSS_SELECTOR, INDEX_CSS_SELECTOR)))
+    WebDriverWait(browser, TIME_LIMIT).until(\
+                    EC.presence_of_element_located((By.CSS_SELECTOR, INDEX_SELECTOR)))
     browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
 
-    episode_table = browser.find_element_by_class_name(INDEX_CSS_SELECTOR).find_element_by_css_selector("*")
+    episode_table = browser.find_element_by_css_selector(INDEX_SELECTOR).find_element_by_css_selector("*")
     episode_list = episode_table.find_elements_by_tag_name('tr')[:2:-1]
     episode_list = [i.find_element_by_tag_name('a') for i in episode_list]
-    
+
     return episode_list
 
 def parse_input(episodes):
     episode_list = episodes.split(',')
     for index, entry in enumerate(episode_list):
         try:
-            if type(entry) == int:
+            if isinstance(entry, int):
                 continue
             entry = entry.strip()
             if '-' in entry:
@@ -46,11 +44,10 @@ def parse_input(episodes):
                 episode_list[index] = int(entry)
         except ValueError:
             print "%s found, must be a valid integer" % (entry)
-            browser.Quit()
+            browser.driver.quit()
             raise
     return episode_list
 
-# driver.find_element_by_link_text('Continue')
 def download_vid(link):
     browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 't')
     browser.get(link)
@@ -58,10 +55,10 @@ def download_vid(link):
     assert "If the player does not work, CLICK" in browser.page_source
     browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
     save_link = browser.find_element_by_link_text('HERE').get_attribute('href')
-    browser.close()
+    browser.driver.close()
     filename = link.split('/')[-1].split('?')[0] + '.mp4'
     print filename, save_link
-    downloader.download_file(save_link, filename)
+    download_file(save_link, filename)
 
 if __name__ == "__main__":
     try:
@@ -71,15 +68,15 @@ if __name__ == "__main__":
 
     init()
 
-    episode_list = get_list(URL)
+    episode_list = get_episode_list(URL)
     for index, entry in enumerate(episode_list):
-      print "%d. %s"  %(index, entry.text)
-      
+        print "%d. %s"  %(index, entry.text)
+
     print """
     Enter the list of episodes to download.
     Format: 1, 2, 4-6
     """
-    
+
     download_list = parse_input(raw_input())
 
     print "DOWNLOADING:", download_list
@@ -90,8 +87,7 @@ if __name__ == "__main__":
                 print "Sleeping for 1 min to avoid detection"
                 sleep(60)
                 break
-            except KeyboardInterrupt:
-                browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
+            except KeyboardInterrupt: 
                 break
             except:
                 print "Download failed, attempting again infinitely, Use control C to exit"

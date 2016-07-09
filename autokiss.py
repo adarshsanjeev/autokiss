@@ -55,7 +55,7 @@ def download_vid(link):
     assert "If the player does not work, CLICK" in browser.page_source
     browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
     save_link = browser.find_element_by_link_text('HERE').get_attribute('href')
-    browser.driver.close()
+    browser.close()
     filename = link.split('/')[-1].split('?')[0] + '.mp4'
     print filename, save_link
     download_file(save_link, filename)
@@ -92,4 +92,5 @@ if __name__ == "__main__":
             except:
                 print "Download failed, attempting again infinitely, Use control C to exit"
                 browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
-                continue
+                raise
+

@@ -1,3 +1,5 @@
+#!/usr/bin/python2
+
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
@@ -9,7 +11,16 @@ from downloader import download_file
 
 INDEX_SELECTOR = '.listing'
 TIME_LIMIT = 60
+TIME_INTERVAL = 30
 browser = None
+
+def print_help():
+    print '''
+    Autokiss downloader
+    Requires python 2.7
+
+    Usage : python autokiss.py < URL of show page from kissanime/kisscartoon >
+    '''
 
 def init():
     global browser
@@ -22,7 +33,7 @@ def get_episode_list(URL):
     browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
 
     episode_table = browser.find_element_by_css_selector(INDEX_SELECTOR).find_element_by_css_selector("*")
-    episode_list = episode_table.find_elements_by_tag_name('tr')[:2:-1]
+    episode_list = episode_table.find_elements_by_tag_name('tr')[:1:-1]
     episode_list = [i.find_element_by_tag_name('a') for i in episode_list]
 
     return episode_list
@@ -51,10 +62,16 @@ def parse_input(episodes):
 def download_vid(link):
     browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 't')
     browser.get(link)
-    WebDriverWait(browser, TIME_LIMIT).until(EC.presence_of_element_located((By.LINK_TEXT, "HERE")))
-    assert "If the player does not work, CLICK" in browser.page_source
+    if "kisscartoon" in link:
+        link_text = "HERE"
+    elif "kissanime" in link:
+        link_text = "CLICK HERE"
+    else:
+        raise SystemError("Unknown domain")
+    WebDriverWait(browser, TIME_LIMIT).until(EC.presence_of_element_located((By.LINK_TEXT, link_text)))
+    assert "If the player does not work," in browser.page_source
     browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
-    save_link = browser.find_element_by_link_text('HERE').get_attribute('href')
+    save_link = browser.find_element_by_link_text(link_text).get_attribute('href')
     browser.close()
     filename = link.split('/')[-1].split('?')[0] + '.mp4'
     print filename, save_link
@@ -64,8 +81,8 @@ if __name__ == "__main__":
     try:
         URL = argv[1]
     except IndexError:
-        raise SyntaxError("Wrong usage: autokiss.py <url>")
-
+        print_help()
+        raise SystemExit
     init()
 
     episode_list = get_episode_list(URL)
@@ -84,11 +101,17 @@ if __name__ == "__main__":
         while True:
             try:
                 download_vid(episode_list[_].get_attribute('href'))
-                print "Sleeping for 1 min to avoid detection"
-                sleep(60)
+                print "Sleeping for %d seconds to avoid spamming requests" %(TIME_INTERVAL)
+                sleep(TIME_INTERVAL)
                 break
             except KeyboardInterrupt: 
-                break
+                confirm = raw_input("[t]ry again / [s]kip to next episode / [E]xit ?").upper()
+                if confirm == "T":
+                    continue
+                elif confirm == "S":
+                    break
+                else:
+                    raise SystemExit
             except:
                 print "Download failed, attempting again infinitely, Use control C to exit"
                 browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')

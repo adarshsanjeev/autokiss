@@ -72,7 +72,7 @@ def download_vid(link):
     assert "If the player does not work," in browser.page_source
     browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
     save_link = browser.find_element_by_link_text(link_text).get_attribute('href')
-    browser.close()
+    browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
     filename = link.split('/')[-1].split('?')[0] + '.mp4'
     print filename, save_link
     download_file(save_link, filename)

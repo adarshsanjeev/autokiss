@@ -12,7 +12,7 @@ from downloader import download_file
 import os
 
 INDEX_SELECTOR = '.listing'
-TIME_LIMIT = 60
+TIME_LIMIT = 300
 TIME_INTERVAL = 30
 browser = None
 
@@ -26,12 +26,7 @@ SELENIUM_PROXY = Proxy({
     'httpsProxy': HTTPS_PROXY,
     'ftpProxy': FTP_PROXY,
 })
-
-URLLIB_PROXY = {
-    'http':HTTP_PROXY,
-    'https':HTTPS_PROXY,
-    'ftp':FTP_PROXY,
-}
+URLLIB_PROXY = {}
 
 def print_help():
     print '''
@@ -93,11 +88,18 @@ def download_vid(link):
     save_link = browser.find_element_by_link_text(link_text).get_attribute('href')
     browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
     filename = link.split('/')[-1].split('?')[0] + '.mp4'
-    if download_file(save_link, filename, URLLIB_PROXY) is False:
+
+    if download_file(save_link, filename, proxy=URLLIB_PROXY) is False:
         raise SystemError("Connection error")
 
 if __name__ == "__main__":
     try:
+        if HTTP_PROXY is not None:
+            URLLIB_PROXY['http'] = HTTP_PROXY
+        if HTTPS_PROXY is not None:
+            URLLIB_PROXY['https'] = HTTPS_PROXY
+        if FTP_PROXY is not None:
+            URLLIB_PROXY['ftp'] = FTP_PROXY
         URL = argv[1]
     except IndexError:
         print_help()

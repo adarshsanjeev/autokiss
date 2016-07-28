@@ -1,12 +1,16 @@
 import urllib2
 
-def download_file(url, file_name="a.mp4"):
+def download_file(url, file_name="a.mp4", proxy = None):
     """
     Function to download a file, given url, and save it as file_name
     """
     try:
-        u = urllib2.urlopen(url)
         f = open(file_name, 'wb')
+        if proxy is not None:
+            proxy = urllib2.ProxyHandler(proxy)
+            opener = urllib2.build_opener(proxy)
+            urllib2.install_opener(opener)
+        u = urllib2.urlopen(url)
         meta = u.info()
         file_size = int(meta.getheaders("Content-Length")[0])
         print "Downloading: %s Bytes: %s" % (file_name, file_size)

@@ -120,7 +120,7 @@ if __name__ == "__main__":
     for _ in download_list:
         while True:
             try:
-                download_vid(episode_list[_].get_attribute('href'))
+                download_vid(episode_list[_-1].get_attribute('href'))
                 print "Sleeping for %d seconds to avoid spamming requests" %(TIME_INTERVAL)
                 sleep(TIME_INTERVAL)
                 break
@@ -136,5 +136,6 @@ if __name__ == "__main__":
                 print "Download failed, attempting again infinitely, Use control C to exit"
                 print "Sleeping for %d seconds to avoid spamming requests" %(TIME_INTERVAL)
                 sleep(TIME_INTERVAL)
+    browser.close()
 
 

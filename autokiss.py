@@ -14,7 +14,8 @@ import os
 INDEX_SELECTOR = '.listing'
 TIME_LIMIT = 300
 TIME_INTERVAL = 30
-browser = None
+global browser
+global SHOW_NAME
 
 HTTP_PROXY = os.environ.get("http_proxy")
 HTTPS_PROXY = os.environ.get("https_proxy")
@@ -89,7 +90,7 @@ def download_vid(link):
     browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
     filename = link.split('/')[-1].split('?')[0] + '.mp4'
 
-    if download_file(save_link, filename, proxy=URLLIB_PROXY) is False:
+    if download_file(save_link, "%s/%s" % (SHOW_NAME, filename), proxy=URLLIB_PROXY) is False:
         raise SystemError("Connection error")
 
 if __name__ == "__main__":
@@ -105,6 +106,11 @@ if __name__ == "__main__":
         print_help()
         raise SystemExit
     init()
+
+    SHOW_NAME = URL.split("/")[-1].replace("-","")
+
+    if not os.path.exists(SHOW_NAME):
+        os.makedirs(SHOW_NAME)
 
     episode_list = get_episode_list(URL)
     for index, entry in enumerate(episode_list):
@@ -124,8 +130,11 @@ if __name__ == "__main__":
                 print "Sleeping for %d seconds to avoid spamming requests" %(TIME_INTERVAL)
                 sleep(TIME_INTERVAL)
                 break
-            except KeyboardInterrupt: 
-                confirm = raw_input("[t]ry again / [s]kip to next episode / [E]xit ?").upper()
+            except KeyboardInterrupt:
+                try:
+                    confirm = raw_input("[t]ry again / [s]kip to next episode / [E]xit ?").upper()
+                except EOFError, KeyboardInterrupt:
+                    raise SystemExit
                 if confirm == "T":
                     continue
                 elif confirm == "S":

@@ -37,11 +37,8 @@ def print_help():
     Usage : python autokiss.py < URL of show page from kissanime/kisscartoon >
     '''
 
-def init():
-    global browser
-    browser = webdriver.Firefox(proxy=SELENIUM_PROXY)
-
 def get_episode_list(URL):
+    browser = webdriver.Firefox(proxy=SELENIUM_PROXY)
     browser.get(URL)
     WebDriverWait(browser, TIME_LIMIT).until(\
                     EC.presence_of_element_located((By.CSS_SELECTOR, INDEX_SELECTOR)))
@@ -51,6 +48,7 @@ def get_episode_list(URL):
     episode_list = episode_table.find_elements_by_tag_name('tr')[:1:-1]
     episode_list = [i.find_element_by_tag_name('a') for i in episode_list]
 
+    browser.close()
     return episode_list
 
 def parse_input(episodes):
@@ -75,7 +73,7 @@ def parse_input(episodes):
     return episode_list
 
 def download_vid(link):
-    browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 't')
+    browser = webdriver.Firefox(proxy=SELENIUM_PROXY)
     browser.get(link)
     if "kisscartoon" in link:
         link_text = "HERE"
@@ -87,7 +85,7 @@ def download_vid(link):
     assert "If the player does not work," in browser.page_source
     browser.find_element_by_tag_name('body').send_keys(Keys.ESCAPE)
     save_link = browser.find_element_by_link_text(link_text).get_attribute('href')
-    browser.find_element_by_tag_name('body').send_keys(Keys.CONTROL + 'w')
+    browser.close()
     filename = link.split('/')[-1].split('?')[0] + '.mp4'
 
     if download_file(save_link, "%s/%s" % (SHOW_NAME, filename), proxy=URLLIB_PROXY) is False:
@@ -105,7 +103,6 @@ if __name__ == "__main__":
     except IndexError:
         print_help()
         raise SystemExit
-    init()
 
     SHOW_NAME = URL.split("/")[-1].replace("-","")
 
